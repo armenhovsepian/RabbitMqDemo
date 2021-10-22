@@ -1,18 +1,46 @@
-﻿using RabbitMQ.Client;
-using RabbitMqDemo.Messaging;
+﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
+using RabbitMQ.Client;
 using System;
 using System.Text;
 
 namespace RabbitMqDemo.Producer
 {
-    class RabbitMQManager : IDisposable
+    public class RabbitMQManager : IDisposable
     {
         private readonly IModel _channel;
-        public RabbitMQManager()
+        private readonly IConfiguration _configuration;
+
+        public RabbitMQManager(IConfiguration configuration)
         {
-            var connectionFactory = new ConnectionFactory() { Uri = new Uri(RabbitMqConstants.RabbitMqUri) };
-            var connection = connectionFactory.CreateConnection();
-            _channel = connection.CreateModel();
+            _configuration = configuration;
+
+            // option 1
+            //var connectionFactory = new ConnectionFactory() { Uri = new Uri(RabbitMqConstants.RabbitMqUri) };
+
+            // option 2
+            var connectionFactory = new ConnectionFactory()
+            {
+                HostName = _configuration["RabbitMqHost"],
+                Port = int.Parse(_configuration["RabbitMqPort"]),
+                //UserName = "guest",
+                //Password = "guest",
+                //RequestedConnectionTimeout = TimeSpan.FromMilliseconds(3000) // milliseconds
+            };
+
+            try
+            {
+                var connection = connectionFactory.CreateConnection();
+                _channel = connection.CreateModel();
+
+                connection.ConnectionShutdown += ConnectionShutDown;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($" ==> host: {_configuration["RabbitMqHost"]}, port: {_configuration["RabbitMqPort"]}");
+                Console.WriteLine($" ==> Can not connect to MessageBus: {ex.Message}");
+            }
+
         }
 
         public void SendMessage(string message)
@@ -22,19 +50,19 @@ namespace RabbitMqDemo.Producer
             // - Queue
             // - QueueBind
             _channel.ExchangeDeclare(
-                exchange: RabbitMqConstants.DemoExchange,
+                exchange: _configuration["RabbitMqExchange"],
                 type: ExchangeType.Direct);
 
             _channel.QueueDeclare(
-                queue: RabbitMqConstants.DemoQueue,
+                queue: _configuration["RabbitMqQueue"],
                 durable: false,
                 exclusive: false,
                 autoDelete: false,
                 arguments: null);
 
             _channel.QueueBind(
-                exchange: RabbitMqConstants.DemoExchange,
-                queue: RabbitMqConstants.DemoQueue,
+                exchange: _configuration["RabbitMqExchange"],
+                queue: _configuration["RabbitMqQueue"],
                 routingKey: "");
 
             // if the message is object
@@ -46,15 +74,20 @@ namespace RabbitMqDemo.Producer
             var body = Encoding.UTF8.GetBytes(message);
 
             _channel.BasicPublish(
-                                exchange: RabbitMqConstants.DemoExchange,
+                                exchange: _configuration["RabbitMqExchange"],
                                 routingKey: "",
                                 basicProperties: null, // messageProperties
                                 body: body);
         }
 
+        private void ConnectionShutDown(object sender, ShutdownEventArgs e)
+        {
+            Console.WriteLine(" ==> RabbitMq connection shutdown");
+        }
+
         public void Dispose()
         {
-            if (!_channel.IsClosed)
+            if (_channel.IsOpen)
                 _channel.Close();
         }
     }

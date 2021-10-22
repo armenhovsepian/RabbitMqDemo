@@ -32,11 +32,13 @@ namespace RabbitMqDemo.Consumer
 
             _channel.ExchangeDeclare(exchange: RabbitMqConstants.DemoNotifyExchange,
                 type: ExchangeType.Fanout);
+
             _channel.QueueDeclare(queue: RabbitMqConstants.DemoNotifyQueue,
                 durable: false,
                 exclusive: false,
                 autoDelete: false,
                 arguments: null);
+
             _channel.QueueBind(exchange: RabbitMqConstants.DemoNotifyExchange,
                 queue: RabbitMqConstants.DemoNotifyQueue,
                 routingKey: "");

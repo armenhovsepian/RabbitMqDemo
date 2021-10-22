@@ -1,0 +1,38 @@
+version : "2.1"
+
+services:
+   rabbitmq:
+    image: "rabbitmq:3.9-management"
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - 'rabbitmq_data:/data'
+    healthcheck:
+      test: "exit 0"
+
+   porducer:
+     image: "rabbitmqdemo.producer:latest"
+     build:
+      context: .
+      dockerfile: RabbitMqDemo.Producer/Dockerfile
+     depends_on: 
+       rabbitmq:
+        condition: service_healthy
+     environment:
+       - "RabbitMqHost=rabbitmq"
+
+   consumer:
+     image: "rabbitmqdemo.consumer:latest"
+     build:
+      context: .
+      dockerfile: RabbitMqDemo.Consumer/Dockerfile
+     depends_on: 
+       rabbitmq:
+        condition: service_healthy
+     environment:
+       - "RabbitMqHost=rabbitmq"
+
+
+volumes:
+  rabbitmq_data:

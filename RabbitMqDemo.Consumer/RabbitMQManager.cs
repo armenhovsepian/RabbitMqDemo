@@ -1,6 +1,6 @@
-﻿using RabbitMQ.Client;
+﻿using Microsoft.Extensions.Configuration;
+using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
-using RabbitMqDemo.Messaging;
 using System;
 using System.Text;
 
@@ -9,31 +9,47 @@ namespace RabbitMqDemo.Consumer
     class RabbitMQManager : IDisposable
     {
         private readonly IModel _channel;
-        public RabbitMQManager()
-        {
-            //var connectionFactory = new ConnectionFactory()
-            //{
-            //    HostName = "localhost",
-            //    UserName = "guest",
-            //    Password = "guest",
-            //    Port = 5672,
-            //    RequestedConnectionTimeout = TimeSpan.FromMilliseconds(3000), // milliseconds
-            //};
+        private readonly IConfiguration _configuration;
 
-            var connectionFactory = new ConnectionFactory() { Uri = new Uri(RabbitMqConstants.RabbitMqUri) };
-            var connection = connectionFactory.CreateConnection();
-            _channel = connection.CreateModel();
+        public RabbitMQManager(IConfiguration configuration)
+        {
+            _configuration = configuration;
+            // option 1
+            //var connectionFactory = new ConnectionFactory() { Uri = new Uri(RabbitMqConstants.RabbitMqUri) };
+
+            // option 2
+            var connectionFactory = new ConnectionFactory()
+            {
+                HostName = _configuration["RabbitMqHost"],
+                Port = int.Parse(_configuration["RabbitMqPort"]),
+                //UserName = "guest",
+                //Password = "guest",
+                //RequestedConnectionTimeout = TimeSpan.FromMilliseconds(3000) // milliseconds
+            };
+
+            try
+            {
+                var connection = connectionFactory.CreateConnection();
+                _channel = connection.CreateModel();
+
+                connection.ConnectionShutdown += ConnectionShutDown;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($" ==> host: {_configuration["RabbitMqHost"]}, port: {_configuration["RabbitMqPort"]}");
+                Console.WriteLine($" ==> Can not connect to MessageBus: {ex.Message}");
+            }
         }
 
         public void ListenForMessage()
         {
-            _channel.QueueDeclare(queue: RabbitMqConstants.DemoQueue,
+            _channel.QueueDeclare(queue: _configuration["RabbitMqQueue"],
                 durable: false,
                 exclusive: false,
                 autoDelete: false,
                 arguments: null);
 
-            _channel.BasicQos(prefetchSize:0,
+            _channel.BasicQos(prefetchSize: 0,
                 prefetchCount: 1,
                 global: false);
 
@@ -50,18 +66,23 @@ namespace RabbitMqDemo.Consumer
 
                 var body = eventArgs.Body;
                 var message = Encoding.UTF8.GetString(body.ToArray());
-                Console.WriteLine("Message Received: {0}", message);
+                Console.WriteLine(" ==> Message Received: {0}", message);
             };
 
-            _channel.BasicConsume(queue: RabbitMqConstants.DemoQueue,
+            _channel.BasicConsume(queue: _configuration["RabbitMqQueue"],
                                  autoAck: true,
                                  consumer: consumer // customConsumer
                                  );
         }
 
+        private void ConnectionShutDown(object sender, ShutdownEventArgs e)
+        {
+            Console.WriteLine(" ==> RabbitMq connection shutdown");
+        }
+
         public void Dispose()
         {
-            if (!_channel.IsClosed)
+            if (_channel.IsOpen)
                 _channel.Close();
         }
     }

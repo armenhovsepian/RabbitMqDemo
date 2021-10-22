@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "RabbitMqDemo.Producer": {
+      "commandName": "Project"
+    },
+    "Docker": {
+      "commandName": "Docker"
+    }
+  }
+}
