@@ -1,4 +1,4 @@
-## Implementing Producer/Consumer with .NET Core console applications and RabbitMq
+### Implementing Producer/Consumer with .NET Core console applications and RabbitMQ
 
 Here is a demo program that shows how RabbitMQ can be used as a message broker between two .NET Core console applications.
 
@@ -9,7 +9,7 @@ docker run -it --rm --name rabbitmq -p 5672:5672 -p 15672:15672 rabbitmq:3.9-man
 ```
 
 
-### Follow these steps to run Producer and Concumer applications as Docker containers
+#### Follow these steps to run Producer and Concumer applications as Docker containers
 
 In the RabbitMqDemo.Producer.csproj directory, create an image of the producer
 ```
