@@ -21,7 +21,7 @@ In the RabbitMqDemo.Consumer.csproj directory, create an image of the producer
 docker build -t rabbitmqdemo.consumer .
 ```
 
-In the RabbitMqDemo.sln directory, execute the docker-compose to run containers
+In the RabbitMqDemo.sln directory, run containers with docker-compose
 ```
 docker-compose run
 ```
